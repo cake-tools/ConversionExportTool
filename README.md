@@ -3,7 +3,9 @@
 
 In order to run the CAKE Conversion Export Tool, you will need to follow the directions below:
 
-This runs on Python 3.4
+## Requirements
+* `Python 3.4`
+* `MongoDB`
 
 ## Guidelines & Caveats:
   * This tool is not meant for LARGE date ranges or LARGE report sizes. Whenever possible, please keep your report queries within one or two days maximum. Remember, you have the ability to queue multiple jobs!
