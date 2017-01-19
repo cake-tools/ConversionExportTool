@@ -55,3 +55,19 @@ Great! You've scheduled an export. Now in a separate terminal window, navigate t
 The Task Runner connects to the SQS queue and processes each job in the queue. Keep in mind that it may take a few hours to complete your export. Once the job is complete it drops the completed CSV in your S3 bucket as well as providing a link to download the report in the web interface.
 
 The csv download link, "Download Report" on the Conversion Export Tool interface is only valid for 24 hours from the time the queue job completes. This is a limitation of S3. Your csv file will always be accessible from S3.
+
+## Additional Information
+
+### Reading Your Queue Report (Web Interface)
+#### Date Formatting
+The `date format` for the web interface is defaulted to `dd-mm-yyyy`.
+
+#### Job ID
+A `job_id` looks like this `report_10012016_04022016`. It consists of 3 parts: title, start, and end date. The title `report` begins the job_id. The `start date` is in `DDMMYYYY` format; same with the `end date`. For the example `job id`, the csv would be contain the results of January 10th 2016 to February 4th 2016. 
+
+#### Job Statuses
+Your queued export job can have one of the following statuses:
+* `Queued`: Your job was successfully added to the SQS queue. When the task runner is executed, it will read from the SQS queue and process each queue item in the order that it was entered. 
+* `In Progress`: Your queued job is now being actively exported. In this state, it is best to leave your task runner alive until you receive an updated status.
+* `Success`: Your queue job has completed. The `Download Link` is now visible. Clicking on the link will automatically start a download of your file.
+* `Failed`: Your queue job encountered an error while being exported. Try reading the task runner output, or queue the job once again.
