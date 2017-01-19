@@ -21,7 +21,7 @@ with app.app_context():
 
     mongo = PyMongo(app)
     db_collection_name = mongo.db.collection_name # replace 'collection_name' with the name of your mongoDB collection name
-    sqs_queue_name = " " # within the single quotes fill in with the name of your SQS queue. For example: 'ConversionReportQueue'
+    sqs_queue_name = " " # within the quotes fill in with the name of your SQS queue. For example: 'ConversionReportQueue'
 
 
     def login_required(f):
