@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 import settings
 
 
-client = MongoClient(" ") # within the single quotes, fill in your mongoDB uri: example: 'mongodb://paul:test@ds151018.mlab.com:51018/job_table'
+client = MongoClient(" ") # within the quotes, fill in your mongoDB uri: example: 'mongodb://paul:test@ds151018.mlab.com:51018/job_table'
 database = client.job_table #replace 'job_table' with the your mongoDB instance. example: job_table
 admin_domain = " " # Your CAKE instance admin domain without 'http://'
 api_key = " " # A CAKE admin api key
