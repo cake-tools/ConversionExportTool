@@ -13,7 +13,7 @@ In order to run the CAKE Conversion Export Tool, you will need to follow the dir
   * Use the format 'dd-mm-yyyy' for both the start and end date (the dashes must be included)
 
 ## Instructions
-1. First execute the following command in your terminal `pip freeze -r requirements.txt`. This will install all the necessary Python packages to run the tool.
+1. First execute the following command in your terminal `pip install -r requirements.txt`. This will install all the necessary Python packages to run the tool.
 
 2. Configure your AWS credentials
   * In your terminal run `aws config`. It will ask you a few questions requiring you to provide an AWS access key and secret key as well as your default region.
