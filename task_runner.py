@@ -1,35 +1,28 @@
 import boto3
 import json
 import time
-import copy
 from collections import OrderedDict
 import re
 import csv
 from datetime import datetime, date, timedelta
 import requests
 from flask import Flask, render_template, url_for, request, redirect, g, jsonify, flash, session, Markup
-from run import app, mongo
+from run import app
 from pymongo import *
 from bs4 import BeautifulSoup
-import settings
+from settings import *
 
-
-client = MongoClient(" ") # within the quotes, fill in your mongoDB uri: example: 'mongodb://paul:test@ds151018.mlab.com:51018/job_table'
-database = client.job_table #replace 'job_table' with the your mongoDB instance. example: job_table
-admin_domain = " " # Your CAKE instance admin domain without 'http://'
-api_key = " " # A CAKE admin api key
-sqs_queue_url = " " # Log into your AWS console and retrieve the url for the queue you would like to use for scheduling/queuing report exports. Example: 'https://sqs.us-east-1.amazonaws.com/029737694246/MyQueue'
-s3_bucket_name = " " #within the quotes, fill in with the name of the s3 bucket to store completed csv. Example: conversionreport
-
+client = MongoClient(MONGODB_DATABASE['uri'])
+db = client[MONGODB_DATABASE['database_name']]
 
 in_progress = False
 
 def get_country_codes():
     payload = dict(
-        api_key=api_key,
+        api_key=API_KEY,
         )
 
-    endpoint_string = 'http://' + admin_domain + '/api/1/get.asmx/Currencies'
+    endpoint_string = 'http://' + ADMIN_DOMAIN_URL + '/api/1/get.asmx/Currencies'
     soup = requests.post(endpoint_string,json=payload)
     r = soup.json()
 
@@ -51,13 +44,14 @@ def return_currency_name(country_id, country_codes):
 
 
 def receive_message():
+
     in_progress = True
     client = boto3.client('sqs')
-    queue_size_response = client.get_queue_attributes(QueueUrl= sqs_queue_url,
+    queue_size_response = client.get_queue_attributes(QueueUrl= SQS_QUEUE['url'],
                                                 AttributeNames=['ApproximateNumberOfMessages'])
     queue_size = queue_size_response["Attributes"]["ApproximateNumberOfMessages"]
     if queue_size != "0":
-        response = OrderedDict(client.receive_message(QueueUrl = sqs_queue_url,
+        response = OrderedDict(client.receive_message(QueueUrl = SQS_QUEUE['url'],
                                             AttributeNames=['Body'],
                                             MaxNumberOfMessages=1))
         return response
@@ -67,22 +61,22 @@ def receive_message():
 
 def delete_message(receipt_handle):
     client = boto3.client('sqs')
-    response = client.delete_message(QueueUrl= sqs_queue_url,
+    response = client.delete_message(QueueUrl= SQS_QUEUE['url'],
                                      ReceiptHandle=receipt_handle)
     return response
 
-def enumerate_dates(start, end):   #assumes start and end are both date() objects
-	start_date = datetime(start.year, start.month, start.day)
-	end_date = datetime(end.year, end.month, end.day)
-	delta = end_date - start_date
+def enumerate_dates(start, end):
+    start_date = datetime(start.year, start.month, start.day)
+    end_date = datetime(end.year, end.month, end.day)
+    delta = end_date - start_date
 
-	for i in range(delta.days + 1):
-		next_start_date = start_date + timedelta(days=1)
-		for i in range(48):
-			next_start_hour = start_date + timedelta(minutes=30)
-			yield start_date, next_start_hour
-			start_date = next_start_hour
-		start_date=next_start_date
+    for i in range(delta.days + 1):
+        next_start_date = start_date + timedelta(days=1)
+        for i in range(48):
+            next_start_hour = start_date + timedelta(minutes=30)
+            yield start_date, next_start_hour
+            start_date = next_start_hour
+        start_date=next_start_date
 
 def date_convert_for_csv(date):
     extract_integers = re.findall('\d+', date)
@@ -105,11 +99,11 @@ def conversion_time_delta(conversion_date, click_date):
 def s3_job(filename):
 # expire 86400 seconds is 24 hours
     s3 = boto3.resource('s3')
-    s3.meta.client.upload_file('temp.csv', s3_bucket_name, '%s.csv' % filename)
+    s3.meta.client.upload_file('temp.csv', S3_BUCKET['name'], '%s.csv' % filename)
 
     client = boto3.client('s3')
     url = client.generate_presigned_url('get_object',
-                                        Params={'Bucket': s3_bucket_name ,'Key': '%s.csv' % filename},
+                                        Params={'Bucket': S3_BUCKET['name'],'Key': '%s.csv' % filename},
                                         ExpiresIn=86400)
     return url
 
@@ -119,8 +113,6 @@ def execute_call(response):
     body = (response["Messages"][0]["Body"]).replace("'", "\"")
     load_body = json.loads(body)
 
-    tier = load_body['tier']
-    total_row_count = int(load_body['total_row_count'])
     start_date = load_body['start_date']
     end_date = load_body['end_date']
     job_id = load_body['job_id']
@@ -131,12 +123,10 @@ def execute_call(response):
     start_datetime = datetime.strptime(start_date, "%m/%d/%y")
     end_datetime = datetime.strptime(end_date, "%m/%d/%y")
 
-    collection = database.job
-    collection.update_one({"created_date": created_date}, {"$set": {"status": "In Progress"}})
+    collection_name = db[MONGODB_DATABASE['collection_name']]
+    collection_name.update_one({"created_date": created_date}, {"$set": {"status": "In Progress"}})
 
 
-    #interval = determine_interval(tier)
-    #move this up
     try:
         with open('temp.csv', 'w') as text_file:
             writer = csv.writer(text_file)
@@ -191,8 +181,6 @@ def execute_call(response):
                             'Tracking ID',
                             'UDID'))
 
-            #current_row_count = 0
-            #print(total_row_count)
 
             date_generator = enumerate_dates(start_datetime, end_datetime)
 
@@ -201,7 +189,7 @@ def execute_call(response):
                 end = datetime.strftime(end, '%m/%d/%Y %H:%M')
                 print(start, end)
                 payload = dict(
-                    api_key=api_key,
+                    api_key=API_KEY,
                     start_date=start,
                     end_date=end,
                     conversion_type='all',
@@ -228,11 +216,10 @@ def execute_call(response):
                     sort_field='event_conversion_date',
                     sort_descending='false')
 
-                endpoint_string = 'http://' + admin_domain + '/api/15/reports.asmx/EventConversions'
+                endpoint_string = 'http://' + ADMIN_DOMAIN_URL + '/api/15/reports.asmx/EventConversions'
                 soup = requests.post(endpoint_string,json=payload)
                 soup_text = soup.text
                 print(soup_text)
-                #test = json.loads(soup_text)
                 replace_nonetypes = soup_text.replace('null', '""')
                 response = json.loads(replace_nonetypes)
 
@@ -351,20 +338,18 @@ def execute_call(response):
                                     c["tracking_id"],
                                     c["udid"]))
 
-                #current_row_count = (current_row_count + int(interval)) + 1
-                #print(current_row_count)
 
         file_link = s3_job(job_id)
         print('REPORT SUCCESSFULLY CREATED')
         print(file_link)
 
-        collection = database.job
-        collection.update_one({"created_date": created_date}, {"$set": {"status": "Success", "file_link": file_link }})
+        collection_name = db[MONGODB_DATABASE['collection_name']]
+        collection_name.update_one({"created_date": created_date}, {"$set": {"status": "Success", "file_link": file_link }})
         in_progress = False
 
     except Exception:
-        collection = database.job
-        collection.update_one({"created_date": created_date}, {"$set": {"status": "Failed"}})
+        collection_name = db[MONGODB_DATABASE['collection_name']]
+        collection_name.update_one({"created_date": created_date}, {"$set": {"status": "Failed"}})
         in_progress = False
         raise
 
