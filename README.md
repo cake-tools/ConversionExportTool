@@ -6,6 +6,8 @@ In order to run the CAKE Conversion Export Tool, you will need to follow the dir
 ## Requirements
 * `Python 3.4`
 * `MongoDB`
+* `AWS SQS`
+* `AWS S3`
 
 ## Guidelines & Caveats:
   * This tool is not meant for LARGE date ranges or LARGE report sizes. Whenever possible, please keep your report queries within one or two days maximum. Remember, you have the ability to queue multiple jobs!
@@ -13,29 +15,13 @@ In order to run the CAKE Conversion Export Tool, you will need to follow the dir
   * Use the format 'dd-mm-yyyy' for both the start and end date (the dashes must be included)
 
 ## Instructions
+
 1. First execute the following command in your terminal `pip install -r requirements.txt`. This will install all the necessary Python packages to run the tool.
 
 2. Configure your AWS credentials
   * In your terminal run `aws config`. It will ask you a few questions requiring you to provide an AWS access key and secret key as well as your default region.
 
-2. Fill in the global variables in `run.py`
-
-  * `app.config['MONGO_DBNAME']`: enter the name of your mongoDB name.
-  * `app.config['MONGO_URI']`: populate the empty string with the uri address to your mongoDB table
-  * `sqs_queue_name`: log into your AWS Console and fill in this string with the name of the queue you would like to send queued export jobs
-  * `db_collection_name`: inside your mongoDB instance is a collection name.
-
-
-3. Fill in the global variables in `task_runner.py`
-
-  * `MongoClient`: populate the empty string with the uri address to your mongoDB table
-  * `database`: replace 'job_table' with the your mongoDB instance. example: job_table
-  * `admin_domain`: Fill in your admin domain url, without "http://"
-  * `api_key`: Provide an api key from your CAKE Instance
-  * `sqs_queue_name`: The queue url of your SQS queue.
-    * Example: https://sqs.us-east-1.amazonaws.com/012319234/QueueName
-  * `s3_bucket_name`: #within the quotes, fill in with the name of the s3 bucket to store completed csv.
-
+3. Fill in each empty quote in `settings.py`
 
 4. Run the web interface
   * In the main cake conversion tools directory, run the command 'python run.py', this starts the Flask web server for the web interface.
