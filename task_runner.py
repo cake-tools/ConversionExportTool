@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import boto3
 import json
 import time
@@ -83,18 +85,28 @@ def date_convert_for_csv(date):
     date_string = ''.join(extract_integers)
     if len(date_string) > 10:
         date_string = date_string[:10] + '.' + date_string[10:]
-        date_result = datetime.fromtimestamp(float(date_string)).strftime("%d-%m-%YT%H:%M:%S.%f")
+        date_result = (datetime.utcfromtimestamp(float(date_string)) + timedelta(hours=1)).strftime("%d-%m-%YT%H:%M:%S.%f")
         return date_result
     else:
-        timestamp_parsed = datetime.fromtimestamp(int(date_string)) + '.000000'
+        timestamp_parsed = (datetime.utcfromtimestamp(int(date_string))+ timedelta(hours=1)) + '.000000'
         date_result = timestamp_parsed.strftime("%d-%m-%YT%H:%M:%S.%f")
         return date_result
 
 def conversion_time_delta(conversion_date, click_date):
     conversion_date = datetime.strptime(conversion_date, "%d-%m-%YT%H:%M:%S.%f")
     click_date = datetime.strptime(click_date, "%d-%m-%YT%H:%M:%S.%f")
-    time_delta = conversion_date - click_date
-    return time_delta
+
+    if click_date > conversion_date:
+        time_delta = "1"
+        return time_delta
+
+    elif conversion_date > click_date:
+        time_delta = conversion_date - click_date
+        if time_delta.seconds < 1:
+            time_delta = "1"
+            return time_delta
+        else:
+            return time_delta
 
 def s3_job(filename):
 # expire 86400 seconds is 24 hours
@@ -210,7 +222,7 @@ def execute_call(response):
                     disposition_id=0,
                     source_affiliate_billing_status='all',
                     brand_advertiser_billing_status='all',
-                    test_filter='both',
+                    test_filter='non_tests',
                     start_at_row=0,
                     row_limit=100000,
                     sort_field='event_conversion_date',
@@ -220,8 +232,7 @@ def execute_call(response):
                 soup = requests.post(endpoint_string,json=payload)
                 soup_text = soup.text
                 print(soup_text)
-                replace_nonetypes = soup_text.replace('null', '""')
-                response = json.loads(replace_nonetypes)
+                response = json.loads(soup_text)
 
                 for c in response["d"]["event_conversions"]:
                     c["event_conversion_date"] = date_convert_for_csv(c["event_conversion_date"])
@@ -237,54 +248,45 @@ def execute_call(response):
                     else:
                         time_delta = ""
 
-                    if c["current_disposition"] == "":
-                        current_disposition = c["current_disposition"]
-                    else:
-                        current_disposition = c["current_disposition"]["disposition_name"]
+                    country_code = ''
+                    if not c['country'] is None:
+                        country_code = c['country']['country_code']
 
-                    if c["language"] == "":
-                        language = c["language"]
-                    else:
-                        language = c["language"]["language_name"]
+                    region = ''
+                    if not c['region'] is None:
+                        region = c['region']['region_code']
 
-                    if c["country"] == "":
-                        country = c["country"]
-                    else:
-                        country = c["country"]["country_code"]
+                    language = ''
+                    if not c['language'] is None:
+                        language = c['language']['language_name']
 
-                    if c["region"] == "":
-                        region = c["region"]
-                    else:
-                        region = c["region"]["region_name"]
+                    isp = ''
+                    if not c['isp'] is None:
+                        isp = c['isp']['isp_name']
 
-                    if c["isp"] == "":
-                        isp = c["isp"]
-                    else:
-                        isp = c["isp"]["isp_name"]
+                    device = ''
+                    if not c['device'] is None:
+                        device = c['device']['device_name']
 
-                    if c["operating_system"] == "":
-                        operating_system = c["operating_system"]
-                        operating_system_major_version = ""
-                        operating_system_minor_version = ""
-                    else:
-                        operating_system = c["operating_system"]["operating_system_name"]
-                        operating_system_major_version = c["operating_system"]["operating_system_version"]["version_name"]
-                        operating_system_minor_version = c["operating_system"]["operating_system_version_minor"]["version_id"]
+                    operating_system = ''
+                    os_major = ''
+                    os_minor = ''
+                    if not c['operating_system'] is None:
+                        operating_system = c['operating_system']['operating_system_name']
+                        os_major = c['operating_system']['operating_system_version']['version_name']
+                        os_minor = c['operating_system']['operating_system_version_minor']['version_name']
 
-                    if c["browser"] == "":
-                        browser = c["browser"]
-                        browser_major_version = ""
-                        browser_minor_version = ""
+                    browser = ''
+                    browser_major = ''
+                    browser_minor = ''
+                    if not c['browser'] is None:
+                        browser = c['browser']['browser_name']
+                        browser_major = c['browser']['browser_version']['version_name']
+                        browser_minor = c['browser']['browser_version_minor']['version_name']
 
-                    else:
-                        browser = c["browser"]["browser_name"]
-                        browser_major_version = c["browser"]["browser_version"]["version_id"]
-                        browser_minor_version = c["browser"]["browser_version_minor"]["version_id"]
-
-                    if not c["device"]:
-                        device = ""
-                    else:
-                        device = c["device"]["device_name"]
+                    current_disposition = ''
+                    if not c['current_disposition'] is None:
+                        current_disposition = c["current_disposition"]["disposition_type"]["disposition_type_name"]
 
 
                     writer.writerow((c["event_conversion_id"],
@@ -313,7 +315,7 @@ def execute_call(response):
                                     c["transaction_id"],
                                     c["event_conversion_ip_address"],
                                     c["click_ip_address"],
-                                    country,
+                                    country_code,
                                     c["event_conversion_referrer_url"],
                                     c["click_referrer_url"],
                                     c["event_conversion_user_agent"],
@@ -324,11 +326,11 @@ def execute_call(response):
                                     isp,
                                     device,
                                     operating_system,
-                                    operating_system_major_version,
-                                    operating_system_minor_version,
+                                    os_major,
+                                    os_minor,
                                     browser,
-                                    browser_major_version,
-                                    browser_minor_version,
+                                    browser_major,
+                                    browser_minor,
                                     c["event_conversion_score"],
                                     c["paid_unbilled"]["amount"],
                                     c["received_unbilled"]["amount"],
