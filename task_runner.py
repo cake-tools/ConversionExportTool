@@ -230,8 +230,8 @@ def execute_call(response):
 
                 endpoint_string = 'http://' + ADMIN_DOMAIN_URL + '/api/15/reports.asmx/EventConversions'
                 soup = requests.post(endpoint_string,json=payload)
+                print('processing API response')
                 soup_text = soup.text
-                print(soup_text)
                 response = json.loads(soup_text)
 
                 for c in response["d"]["event_conversions"]:
@@ -339,6 +339,7 @@ def execute_call(response):
                                     c["price_format"]["price_format_name"],
                                     c["tracking_id"],
                                     c["udid"]))
+                print('Processing complete')
 
 
         file_link = s3_job(job_id)
