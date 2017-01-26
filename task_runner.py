@@ -118,12 +118,7 @@ def s3_job(filename):
                                         Params={'Bucket': S3_BUCKET['name'],'Key': '%s.csv' % filename},
                                         ExpiresIn=86400)
     return url
-'''
-def decode(string_value):
-    encode_string = string_value.encode('utf-8', 'ignore')
-    decode_string = encode_string.decode('utf-8', 'ignore')
-    return decode_string
-'''
+
 
 def execute_call(response):
 
@@ -404,12 +399,13 @@ def execute_call(response):
         file_link = s3_job(job_id)
         print('REPORT SUCCESSFULLY CREATED')
         print(file_link)
+        print('CHECKING FOR ADDITIONAL QUEUED EXPORTS')
 
         collection_name = db[MONGODB_DATABASE['collection_name']]
         collection_name.update_one({"created_date": created_date}, {"$set": {"status": "Success", "file_link": file_link }})
         in_progress = False
 
-    except Exception:
+    except (KeyboardInterrupt, Exception):
         collection_name = db[MONGODB_DATABASE['collection_name']]
         collection_name.update_one({"created_date": created_date}, {"$set": {"status": "Failed"}})
         in_progress = False

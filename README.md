@@ -1,15 +1,15 @@
 # CAKE Conversion Export Tool
 
-
 In order to run the CAKE Conversion Export Tool, you will need to follow the directions below:
 
 ## Requirements
-* `Python 3.4`
+* `Python 2.7`
 * `MongoDB`
 * `AWS SQS`
 * `AWS S3`
 
 ## Guidelines & Caveats:
+  * Please use Python 2.7 to run the Conversion Export Tool!
   * This tool is not meant for LARGE date ranges or LARGE report sizes. Whenever possible, please keep your report queries within one or two days maximum. Remember, you have the ability to queue multiple jobs!
   * Please consider that it may take hours to complete one queued job.
   * Use the format 'dd-mm-yyyy' for both the start and end date (the dashes must be included)
@@ -57,3 +57,11 @@ Your queued export job can have one of the following statuses:
 * `In Progress`: Your queued job is now being actively exported. In this state, it is best to leave your task runner alive until you receive an updated status.
 * `Success`: Your queue job has completed. The `Download Link` is now visible. Clicking on the link will automatically start a download of your file.
 * `Failed`: Your queue job encountered an error while being exported. Try reading the task runner output, or queue the job once again.
+
+## FAQ
+
+* Q: My report has started processing, but it is now frozen on the same interval for a long period of time. What can I do?
+* A: First, cancel the `task_runner.py`. Next, go to the Conversion Export Tool interface and requeue the job. Lastly, run the `task_runner.py` again. Your report will be processed succesfully.
+
+* Q: I've successfully added an export job in the queue, but when I run `task_runner.py` I get either get an error or a "No Message in Queue" message.
+* A: There is usually a short delay period between the time a message is sent to SQS and when you can receive a message. Wait a minute before running `task_runner.py` to resolve this issue.
