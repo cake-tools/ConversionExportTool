@@ -11,10 +11,10 @@ SQS_QUEUE = {
 }
 
 S3_BUCKET = {
-    'name': ''
+    'name': '' #example: exportreports
 }
 
-ADMIN_DOMAIN_URL = ''
+ADMIN_DOMAIN_URL = '' #DO NOT include 'http://' before the url  example: 'admin.lab.com' not 'http://admin.lab.com'
 
-API_KEY = ''
+API_KEY = '' #Your Cake instance API key.
 
