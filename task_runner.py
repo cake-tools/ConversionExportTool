@@ -118,7 +118,12 @@ def s3_job(filename):
                                         Params={'Bucket': S3_BUCKET['name'],'Key': '%s.csv' % filename},
                                         ExpiresIn=86400)
     return url
-
+'''
+def decode(string_value):
+    encode_string = string_value.encode('utf-8', 'ignore')
+    decode_string = encode_string.decode('utf-8', 'ignore')
+    return decode_string
+'''
 
 def execute_call(response):
 
@@ -140,7 +145,7 @@ def execute_call(response):
 
 
     try:
-        with open('temp.csv', 'w') as text_file:
+        with open('temp.csv', 'wb') as text_file:
             writer = csv.writer(text_file)
             writer.writerow(('Conversion ID',
                             'Last Updated',
@@ -248,31 +253,82 @@ def execute_call(response):
                     else:
                         time_delta = ""
 
+
+                    # encodings
+                    conversion_id = c["event_conversion_id"]
+                    last_updated = c["last_updated"]
+                    conversion_date = c["event_conversion_date"]
+                    click_date = c["click_date"]
+                    affiliate_id = c["source_affiliate"]["source_affiliate_id"]
+                    affiliate_name = c["source_affiliate"]["source_affiliate_name"].encode('utf-8','ignore')
+                    advertiser_id = c["brand_advertiser"]["brand_advertiser_id"]
+                    advertiser_name = c["brand_advertiser"]["brand_advertiser_name"].encode('utf-8', 'ignore')
+                    offer_id = c["site_offer"]["site_offer_id"]
+                    offer_name = c["site_offer"]["site_offer_name"].encode('utf-8', 'ignore')
+                    creative_id = c["creative"]["creative_id"]
+                    sub_id = c["sub_id_1"].encode('utf-8', 'ignore')
+                    sub_id_2 = c["sub_id_2"].encode('utf-8', 'ignore')
+                    sub_id_3 = c["sub_id_3"].encode('utf-8', 'ignore')
+                    sub_id_4 = c["sub_id_4"].encode('utf-8', 'ignore')
+                    sub_id_5 = c["sub_id_5"].encode('utf-8', 'ignore')
+                    source_type = c["source_type"]
+                    paid_currency_id = c["paid"]["currency_id"]
+                    paid_amount = c["paid"]["amount"]
+                    received_currency_id = c["received"]["currency_id"]
+                    received_amount = c["received"]["amount"]
+                    pixel_dropped = c["pixel_dropped"]
+                    conversion_ip_address = c["event_conversion_ip_address"]
+                    click_ip_address = c["click_ip_address"]
+                    transaction_id = c["transaction_id"].encode('utf-8', 'ignore')
+                    event_conversion_score = c["event_conversion_score"]
+                    paid_unbilled_amount = c["paid_unbilled"]["amount"]
+                    received_unbilled_amount = c["received_unbilled"]["amount"]
+                    click_request_session_id = c["click_request_session_id"]
+                    event_name = c["event_info"]["event_name"].encode('utf-8', 'ignore')
+                    price_format = c["price_format"]["price_format_name"].encode('utf-8', 'ignore')
+                    tracking_id = c["tracking_id"]
+
+                    event_conversion_user_agent = ''
+                    if not c["event_conversion_user_agent"] is None:
+                        event_conversion_user_agent = c["event_conversion_user_agent"].encode('utf-8', 'ignore')
+
+                    click_user_agent = ''
+                    if not c["click_user_agent"] is None:
+                        click_user_agent = c["click_user_agent"].encode('utf-8', 'ignore')
+
+                    conversion_referrer = ''
+                    if not c['event_conversion_referrer_url'] is None:
+                        conversion_referrer = c["event_conversion_referrer_url"].encode('utf-8', 'ignore')
+
+                    referrer = ''
+                    if not c["click_referrer_url"] is None:
+                        referrer = c["click_referrer_url"].encode('utf-8', 'ignore')
+
                     country_code = ''
                     if not c['country'] is None:
-                        country_code = c['country']['country_code']
+                        country_code = c['country']['country_code'].encode('utf-8', 'ignore')
 
                     region = ''
                     if not c['region'] is None:
-                        region = c['region']['region_code']
+                        region = c['region']['region_name'].encode('utf-8', 'ignore')
 
                     language = ''
                     if not c['language'] is None:
-                        language = c['language']['language_name']
+                        language = c['language']['language_name'].encode('utf-8', 'ignore')
 
                     isp = ''
                     if not c['isp'] is None:
-                        isp = c['isp']['isp_name']
+                        isp = c['isp']['isp_name'].encode('utf-8', 'ignore')
 
                     device = ''
                     if not c['device'] is None:
-                        device = c['device']['device_name']
+                        device = c['device']['device_name'].encode('utf-8', 'ignore')
 
                     operating_system = ''
                     os_major = ''
                     os_minor = ''
                     if not c['operating_system'] is None:
-                        operating_system = c['operating_system']['operating_system_name']
+                        operating_system = c['operating_system']['operating_system_name'].encode('utf-8', 'ignore')
                         os_major = c['operating_system']['operating_system_version']['version_name']
                         os_minor = c['operating_system']['operating_system_version_minor']['version_name']
 
@@ -280,46 +336,49 @@ def execute_call(response):
                     browser_major = ''
                     browser_minor = ''
                     if not c['browser'] is None:
-                        browser = c['browser']['browser_name']
+                        browser = c['browser']['browser_name'].encode('utf-8', 'ignore')
                         browser_major = c['browser']['browser_version']['version_name']
                         browser_minor = c['browser']['browser_version_minor']['version_name']
 
                     current_disposition = ''
                     if not c['current_disposition'] is None:
-                        current_disposition = c["current_disposition"]["disposition_type"]["disposition_type_name"]
+                        current_disposition = c["current_disposition"]["disposition_type"]["disposition_type_name"].encode('utf-8', 'ignore')
 
+                    udid = ''
+                    if not c['udid'] is None:
+                        udid = c['udid'].encode('utf-8', 'ignore')
 
-                    writer.writerow((c["event_conversion_id"],
-                                    c["last_updated"],
-                                    c["event_conversion_date"],
-                                    c["click_date"],
+                    writer.writerow((conversion_id,
+                                    last_updated,
+                                    conversion_date,
+                                    click_date,
                                     time_delta,
-                                    c["source_affiliate"]["source_affiliate_id"],
-                                    c["source_affiliate"]["source_affiliate_name"],
-                                    c["brand_advertiser"]["brand_advertiser_id"],
-                                    c["brand_advertiser"]["brand_advertiser_name"],
-                                    c["site_offer"]["site_offer_id"],
-                                    c["site_offer"]["site_offer_name"],
-                                    c["creative"]["creative_id"],
-                                    c["sub_id_1"],
-                                    c["sub_id_2"],
-                                    c["sub_id_3"],
-                                    c["sub_id_4"],
-                                    c["sub_id_5"],
-                                    c["source_type"],
-                                    c["paid"]["currency_id"],
-                                    c["paid"]["amount"],
-                                    c["received"]["currency_id"],
-                                    c["received"]["amount"],
-                                    c["pixel_dropped"],
-                                    c["transaction_id"],
-                                    c["event_conversion_ip_address"],
-                                    c["click_ip_address"],
+                                    affiliate_id,
+                                    affiliate_name,
+                                    advertiser_id,
+                                    advertiser_name,
+                                    offer_id,
+                                    offer_name,
+                                    creative_id,
+                                    sub_id,
+                                    sub_id_2,
+                                    sub_id_3,
+                                    sub_id_4,
+                                    sub_id_5,
+                                    source_type,
+                                    paid_currency_id,
+                                    paid_amount,
+                                    received_currency_id,
+                                    received_amount,
+                                    pixel_dropped,
+                                    transaction_id,
+                                    conversion_ip_address,
+                                    click_ip_address,
                                     country_code,
-                                    c["event_conversion_referrer_url"],
-                                    c["click_referrer_url"],
-                                    c["event_conversion_user_agent"],
-                                    c["click_user_agent"],
+                                    conversion_referrer,
+                                    referrer,
+                                    event_conversion_user_agent,
+                                    click_user_agent,
                                     current_disposition,
                                     region,
                                     language,
@@ -331,14 +390,14 @@ def execute_call(response):
                                     browser,
                                     browser_major,
                                     browser_minor,
-                                    c["event_conversion_score"],
-                                    c["paid_unbilled"]["amount"],
-                                    c["received_unbilled"]["amount"],
-                                    c["click_request_session_id"],
-                                    c["event_info"]["event_name"],
-                                    c["price_format"]["price_format_name"],
-                                    c["tracking_id"],
-                                    c["udid"]))
+                                    event_conversion_score,
+                                    paid_unbilled_amount,
+                                    received_unbilled_amount,
+                                    click_request_session_id,
+                                    event_name,
+                                    price_format,
+                                    tracking_id,
+                                    udid))
                 print('Processing complete')
 
 
