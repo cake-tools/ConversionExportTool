@@ -62,13 +62,18 @@ Your queued export job can have one of the following statuses:
 
 ## FAQ
 
-* **Q: My report has started processing, but it is now frozen on the same interval for a long period of time. What can I do?**
-* A: First, cancel the `task_runner.py`. Next, go to the Conversion Export Tool interface and requeue the job. Lastly, run the `task_runner.py` again. Your report will be processed succesfully.
+**Q: My report has started processing, but it is now frozen on the same interval for a long period of time. What can I do?**
 
-* **Q: I've successfully added an export job in the queue, but when I run `task_runner.py` I get either get an error or a "No Message in Queue" message.**
-* A: There is usually a short delay period between the time a message is sent to your SQS queue and when you can receive a message to process. Please wait one minute and run `task_runner.py` again to resolve this issue.
+A: Follow these steps:
+* Cancel the `task_runner.py`.
+* Go to the Conversion Export Tool interface and requeue the job. 
+* Run the `task_runner.py` again.
 
-* **Q: I received the following error message when running `task_runner.py`:**
+**Q: I've successfully added an export job in the queue, but when I run `task_runner.py` I get either get an error or a "No Message in Queue" message.**
+
+A: There is usually a short delay period between the time a message is sent to your SQS queue and when you can receive a message to process. Please wait one minute and run `task_runner.py` again to resolve this issue.
+
+**Q: I received the following error message when running `task_runner.py`:**
 
         Traceback (most recent call last):
           File "task_runner.py", line 426, in <module>
@@ -77,4 +82,4 @@ Your queued export job can have one of the following statuses:
             body = (response["Messages"][0]["Body"]).replace("'", "\"")
         KeyError: 'Messages'
 
-* A: Please wait a few minutes, or manually go into the AWS SQS console and poll the queue you are using for the tool.
+A: Please wait a few minutes, or manually go into the AWS SQS console and poll your queue. After, run `task_runner.py` again.
