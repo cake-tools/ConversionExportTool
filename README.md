@@ -1,6 +1,6 @@
 # CAKE Conversion Export Tool
 
-** The Conversion Export Tool MUST be run on Python 2.7 **
+**THE CONVERSION EXPORT TOOL MUST BE USED ON Python 2.7**
 
 In order to run the CAKE Conversion Export Tool, you will need to follow the directions below:
 
