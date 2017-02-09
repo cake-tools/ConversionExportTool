@@ -205,7 +205,7 @@ def execute_call(response):
                     start_date=start,
                     end_date=end,
                     conversion_type='all',
-                    event_type='macro_event_conversions',
+                    event_type='all',
                     event_id=0,
                     channel_id=0,
                     source_affiliate_id=0,
@@ -229,7 +229,7 @@ def execute_call(response):
                     sort_descending='false')
 
                 endpoint_string = 'http://' + ADMIN_DOMAIN_URL + '/api/15/reports.asmx/EventConversions'
-                soup = requests.post(endpoint_string,json=payload)
+                soup = requests.post(endpoint_string,json=payload, stream=True)
                 print('processing API response')
                 soup_text = soup.text
                 response = json.loads(soup_text)
