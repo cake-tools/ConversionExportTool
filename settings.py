@@ -1,4 +1,5 @@
 MONGODB_DATABASE = {
+
     'uri': '', #example: mongodb://test:pass@ds15132128.mlab.com:19231/job_table
     'database_name': '', #example: job_table
     'collection_name': '' #example: job
@@ -16,3 +17,4 @@ S3_BUCKET = {
 ADMIN_DOMAIN_URL = ''
 
 API_KEY = ''
+
