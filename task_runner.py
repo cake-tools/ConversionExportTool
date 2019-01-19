@@ -7,11 +7,17 @@ from collections import OrderedDict
 import re
 import csv
 from datetime import datetime, date, timedelta
+import urllib3
 import requests
 from flask import Flask, render_template, url_for, request, redirect, g, jsonify, flash, session, Markup
 from run import app
 from pymongo import *
 from bs4 import BeautifulSoup
+import os
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 from settings import *
 
 client = MongoClient(MONGODB_DATABASE['uri'])
@@ -119,8 +125,18 @@ def s3_job(filename):
                                         ExpiresIn=86400)
     return url
 
+def local_job(filename):
+    os.rename('temp.csv', '%s.csv' % filename)
+    fn = '%s.csv' % filename
+    return fn
+
 
 def execute_call(response):
+
+    BAD_GATEWAY_ERROR = 502
+    RATE_LIMITED_ERROR = 429
+    MAX_NUM_SECONDS_TO_SLEEP = 30
+    MAX_NUM_OF_ALLOWED_RETRIES = 10
 
     body = (response["Messages"][0]["Body"]).replace("'", "\"")
     load_body = json.loads(body)
@@ -138,6 +154,8 @@ def execute_call(response):
     collection_name = db[MONGODB_DATABASE['collection_name']]
     collection_name.update_one({"created_date": created_date}, {"$set": {"status": "In Progress"}})
 
+    num_retries = 0
+    response = ''
 
     try:
         with open('temp.csv', 'wb') as text_file:
@@ -193,13 +211,12 @@ def execute_call(response):
                             'Tracking ID',
                             'UDID'))
 
-
             date_generator = enumerate_dates(start_datetime, end_datetime)
 
             for start, end in date_generator:
                 start = datetime.strftime(start, '%m/%d/%Y %H:%M')
                 end = datetime.strftime(end, '%m/%d/%Y %H:%M')
-                print(start, end)
+
                 payload = dict(
                     api_key=API_KEY,
                     start_date=start,
@@ -223,15 +240,59 @@ def execute_call(response):
                     source_affiliate_billing_status='all',
                     brand_advertiser_billing_status='all',
                     test_filter='non_tests',
+                    source_type='all',
+                    payment_percentage_filter='both',
                     start_at_row=0,
                     row_limit=100000,
                     sort_field='event_conversion_date',
                     sort_descending='false')
 
-                endpoint_string = 'http://' + ADMIN_DOMAIN_URL + '/api/15/reports.asmx/EventConversions'
-                soup = requests.post(endpoint_string,json=payload, stream=True)
-                print('processing API response')
-                soup_text = soup.text
+                endpoint_string = 'http://' + ADMIN_DOMAIN_URL + '/api/17/reports.asmx/EventConversions'
+
+                logger.info('%s - Calling API : start: %s, End: %s', datetime.now(), start, end)
+
+                while True:
+                    if num_retries > MAX_NUM_OF_ALLOWED_RETRIES:
+                        logger.error('Tried more than {} times without success. Skipping report {} .'
+                                .format(MAX_NUM_OF_ALLOWED_RETRIES, job_id))
+                        return
+
+                    try:
+                        response = requests.post(endpoint_string,json=payload, stream=True)
+                        if response.status_code == BAD_GATEWAY_ERROR:
+                            logger.info('Bad Gateway Error. Waiting for {} seconds and will try again.'
+                                    .format(str(MAX_NUM_SECONDS_TO_SLEEP)))
+                            time.sleep(MAX_NUM_SECONDS_TO_SLEEP)
+                            num_retries += 1
+                            continue
+
+                        if response.status_code == RATE_LIMITED_ERROR:
+                            logger.info('Throttle detected. Waiting for {} seconds and will try again.'
+                                    .format(str(MAX_NUM_SECONDS_TO_SLEEP)))
+                            time.sleep(MAX_NUM_SECONDS_TO_SLEEP)
+                            num_retries += 1
+                            continue
+
+                        if response.status_code != 200:
+                            logger.error('Error with status code {}. Skipping this report {}'
+                                    .format(response.status_code, job_id))
+                            logger.info('response = '.format(response))
+                            return
+
+                        break
+
+                    except (requests.ConnectionError, urllib3.exceptions.MaxRetryError) as error:
+                        logger.error("ConnectionError: {0}".format(error))
+                        logger.info("Sleeping for {} seconds...".format(MAX_NUM_SECONDS_TO_SLEEP))
+                        time.sleep(MAX_NUM_SECONDS_TO_SLEEP)
+                        num_retries += 1
+                        return
+                    else:
+                        return
+
+                logger.info("%s - Processing ...", datetime.now())
+
+                soup_text = response.text
                 response = json.loads(soup_text)
 
                 for c in response["d"]["event_conversions"]:
@@ -247,7 +308,6 @@ def execute_call(response):
                         time_delta = conversion_time_delta(c["event_conversion_date"], c["click_date"])
                     else:
                         time_delta = ""
-
 
                     # encodings
                     conversion_id = c["event_conversion_id"]
@@ -393,13 +453,12 @@ def execute_call(response):
                                     price_format,
                                     tracking_id,
                                     udid))
-                print('Processing complete')
 
+                #logger.info('%s - Processing complete', datetime.now())
 
-        file_link = s3_job(job_id)
-        print('REPORT SUCCESSFULLY CREATED')
-        print(file_link)
-        print('CHECKING FOR ADDITIONAL QUEUED EXPORTS')
+        #file_link = s3_job(job_id)
+        file_link = local_job(job_id)
+        logger.info('REPORT SUCCESSFULLY CREATED: %s', file_link)
 
         collection_name = db[MONGODB_DATABASE['collection_name']]
         collection_name.update_one({"created_date": created_date}, {"$set": {"status": "Success", "file_link": file_link }})
@@ -420,8 +479,9 @@ if __name__ == "__main__":
         else:
             response = receive_message()
             if response == "No Messages in Queue":
-                print(response)
+                logger.info(response)
                 time.sleep(60.0 - ((time.time() - start_time) % 60.0))
             else:
+                logger.info(time.strftime("%H:%M:%S"))
                 execute_call(response)
                 time.sleep(60.0 - ((time.time() - start_time) % 60.0))
