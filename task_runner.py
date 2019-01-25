@@ -456,8 +456,8 @@ def execute_call(response):
 
                 #logger.info('%s - Processing complete', datetime.now())
 
-        #file_link = s3_job(job_id)
-        file_link = local_job(job_id)
+        file_link = s3_job(job_id)
+        #file_link = local_job(job_id)
         logger.info('REPORT SUCCESSFULLY CREATED: %s', file_link)
 
         collection_name = db[MONGODB_DATABASE['collection_name']]
