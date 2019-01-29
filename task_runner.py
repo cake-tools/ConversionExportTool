@@ -286,7 +286,7 @@ def execute_call(response):
                         logger.info("Sleeping for {} seconds...".format(MAX_NUM_SECONDS_TO_SLEEP))
                         time.sleep(MAX_NUM_SECONDS_TO_SLEEP)
                         num_retries += 1
-                        return
+                        continue
                     else:
                         return
 
